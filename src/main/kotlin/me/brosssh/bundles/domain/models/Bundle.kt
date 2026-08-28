@@ -6,7 +6,7 @@ import org.koin.core.component.inject
 import java.io.File
 import java.util.*
 import app.morphe.patcher.patch.loadPatchesFromJar as loadMorpheBundle
-import app.revanced.patcher.patch.loadPatchesFromJar as loadReVancedBundle
+import app.revanced.patcher.patch.loadPatches as loadReVancedBundle
 
 sealed class Bundle(
     val version: String,
@@ -132,7 +132,10 @@ class ReVancedV4Bundle(
     override val bundleType = BundleType.REVANCED_V4
 
     override suspend fun loadPatchesFromBundle(bundleFile: File) =
-        loadReVancedBundle(setOf(bundleFile))
+        loadReVancedBundle(
+            bundleFile,
+            onFailedToLoad = { _, throwable -> throw throwable }
+        )
             .map { ReVancedPatchAdapter(it) }
             .toSet()
 }
