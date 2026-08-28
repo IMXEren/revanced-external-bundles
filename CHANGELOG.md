@@ -1,3 +1,10 @@
+# [1.2.0-dev.2](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.0-dev.1...v1.2.0-dev.2) (2026-08-28)
+
+
+### Bug Fixes
+
+* update container retention action ([#38](https://github.com/brosssh/revanced-external-bundles/issues/38)) ([1b44ff5](https://github.com/brosssh/revanced-external-bundles/commit/1b44ff56b7dcf60421c6bb31c470f2021c5443c9))
+
 # [1.2.0-dev.1](https://github.com/brosssh/revanced-external-bundles/compare/v1.1.3...v1.2.0-dev.1) (2026-08-28)
 
 
