@@ -1,12 +1,18 @@
 package me.brosssh.bundles.di
 
 import me.brosssh.bundles.Config
+import me.brosssh.bundles.db.SourceManifestSync
 import me.brosssh.bundles.domain.services.BundleService
 import me.brosssh.bundles.domain.services.RefreshJobStatusService
 import me.brosssh.bundles.domain.services.jobs.RefreshAllJobService
 import me.brosssh.bundles.domain.services.jobs.RefreshBundlesJobService
 import me.brosssh.bundles.domain.services.jobs.RefreshPatchesJobService
-import me.brosssh.bundles.integrations.github.GithubClient
+import me.brosssh.bundles.integrations.GitHostType
+import me.brosssh.bundles.integrations.HostResolver
+import me.brosssh.bundles.integrations.common.GitHostCredentials
+import me.brosssh.bundles.integrations.gitea.GiteaHostClientFactory
+import me.brosssh.bundles.integrations.github.GithubClientFactory
+import me.brosssh.bundles.integrations.gitlab.GitlabHostClientFactory
 import me.brosssh.bundles.repositories.*
 import org.koin.dsl.module
 
@@ -21,9 +27,20 @@ val appModule = module {
     single { PatchPackageRepository() }
 
     single {
-        GithubClient(
-            client = get(),
-            githubToken = Config.githubPatToken
+        GitHostCredentials.fromEnv(
+            Config.gitHostsPat,
+            Config.legacyGithubPatToken
+        )
+    }
+
+    single {
+        HostResolver(
+            factories = mapOf(
+                GitHostType.GITHUB to GithubClientFactory(get(), get()),
+                GitHostType.GITLAB to GitlabHostClientFactory(get(), get()),
+                GitHostType.GITEA to GiteaHostClientFactory(get(), get())
+            ),
+            authorities = HostResolver.fromEnv(Config.gitHosts)
         )
     }
 
@@ -57,5 +74,6 @@ val appModule = module {
 
     single { BundleService(get()) }
     single { RefreshJobStatusService(get()) }
+    single { SourceManifestSync(get()) }
 
 }
