@@ -1,3 +1,10 @@
+# [1.2.0-dev.3](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.0-dev.2...v1.2.0-dev.3) (2026-08-28)
+
+
+### Features
+
+* add multi-host Git support, tracked sources and source-aware bundle API v3 ([#35](https://github.com/brosssh/revanced-external-bundles/issues/35)) ([0a46527](https://github.com/brosssh/revanced-external-bundles/commit/0a465278c69e45c170b0531cd7cb37f47ceb5336))
+
 # [1.2.0-dev.2](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.0-dev.1...v1.2.0-dev.2) (2026-08-28)
 
 
