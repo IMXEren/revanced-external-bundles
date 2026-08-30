@@ -1,3 +1,10 @@
+## [1.2.1-dev.1](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.0...v1.2.1-dev.1) (2026-08-30)
+
+
+### Performance Improvements
+
+* **build:** avoid rebuilding release artifacts in Docker ([#43](https://github.com/brosssh/revanced-external-bundles/issues/43)) ([1778d20](https://github.com/brosssh/revanced-external-bundles/commit/1778d20b3bab561ede9541d623e80acecf96e59f))
+
 # [1.2.0](https://github.com/brosssh/revanced-external-bundles/compare/v1.1.3...v1.2.0) (2026-08-30)
 
 
