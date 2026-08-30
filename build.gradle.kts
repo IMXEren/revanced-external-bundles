@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.patcher.runtimes)
     application
     `maven-publish`
     signing
@@ -87,10 +88,9 @@ dependencies {
 
     implementation(libs.dotenv)
     implementation(libs.tomlj)
-    implementation(libs.revanced.patcher)
-    implementation(libs.morphe.patcher)
     implementation(libs.logback)
     implementation(libs.apksig)
+    implementation(libs.semver4j)
 
     testImplementation(libs.kotlin.test)
 }
@@ -103,9 +103,7 @@ val validateSources by tasks.registering(JavaExec::class) {
     group = "verification"
     description = "Validate the tracked sources manifest (src/main/resources/sources.toml)"
     dependsOn(tasks.named("classes"))
-    javaLauncher.set(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    })
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     mainClass.set("me.brosssh.bundles.db.SourceManifestSync")
     classpath = sourceSets.main.get().runtimeClasspath
 }
