@@ -1,3 +1,10 @@
+# [1.3.0-dev.1](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.1-dev.2...v1.3.0-dev.1) (2026-08-31)
+
+
+### Features
+
+* **web-ui:** improve bundle browser ([#46](https://github.com/brosssh/revanced-external-bundles/issues/46)) ([5690aab](https://github.com/brosssh/revanced-external-bundles/commit/5690aab62991a4617168950e478d90fb58476ae4))
+
 ## [1.2.1-dev.2](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.1-dev.1...v1.2.1-dev.2) (2026-08-31)
 
 
