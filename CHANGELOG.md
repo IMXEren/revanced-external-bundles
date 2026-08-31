@@ -1,3 +1,10 @@
+## [1.2.1-dev.2](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.1-dev.1...v1.2.1-dev.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* **sources:** hide data from disabled sources ([#44](https://github.com/brosssh/revanced-external-bundles/issues/44)) ([f75095f](https://github.com/brosssh/revanced-external-bundles/commit/f75095fa5d41847ad670e2423f8aa6e4e3db2193))
+
 ## [1.2.1-dev.1](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.0...v1.2.1-dev.1) (2026-08-30)
 
 
