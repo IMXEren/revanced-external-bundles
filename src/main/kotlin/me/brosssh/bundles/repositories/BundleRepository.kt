@@ -23,9 +23,11 @@ data class BundlePatchCandidate(
 
 class BundleRepository {
     fun findById(bundleId: Int) = transaction {
-        BundleTable
+        (BundleTable innerJoin SourceTable)
             .selectAll()
-            .where { BundleTable.id eq bundleId }
+            .where {
+                (BundleTable.id eq bundleId) and enabledSourceFilter
+            }
             .limit(1)
             .map(::rowToDomain)
             .singleOrNull()
@@ -77,9 +79,11 @@ class BundleRepository {
     }
 
     fun getBundlesNeedPatchesUpdate() = transaction {
-        BundleTable
+        (BundleTable innerJoin SourceTable)
             .selectAll()
-            .where { BundleTable.needPatchesUpdate eq true }
+            .where {
+                (BundleTable.needPatchesUpdate eq true) and enabledSourceFilter
+            }
             .map { row ->
                 BundlePatchCandidate(
                     id = row[BundleTable.id].value,
@@ -132,7 +136,8 @@ class BundleRepository {
         (BundleTable innerJoin SourceTable innerJoin SourceMetadataTable)
             .selectAll()
             .where {
-                (SourceMetadataTable.ownerName eq owner) and
+                enabledSourceFilter and
+                        (SourceMetadataTable.ownerName eq owner) and
                         (SourceMetadataTable.repoName eq repo) and
                         (BundleTable.isPrerelease eq prerelease) and
                         (BundleTable.isLatest eq true)
@@ -146,7 +151,8 @@ class BundleRepository {
         (BundleTable innerJoin SourceTable innerJoin SourceMetadataTable)
             .selectAll()
             .where {
-                (SourceMetadataTable.ownerName eq owner) and
+                enabledSourceFilter and
+                        (SourceMetadataTable.ownerName eq owner) and
                         (SourceMetadataTable.repoName eq repo) and
                         (BundleTable.version eq version)
             }
@@ -159,7 +165,8 @@ class BundleRepository {
         (BundleTable innerJoin SourceTable innerJoin SourceMetadataTable)
             .selectAll()
             .where {
-                (SourceMetadataTable.ownerName eq owner) and
+                enabledSourceFilter and
+                        (SourceMetadataTable.ownerName eq owner) and
                         (SourceMetadataTable.repoName eq repo) and
                         (BundleTable.isLatest eq true) and
                         channel.releaseFilter
@@ -201,6 +208,10 @@ class BundleRepository {
             .map(::rowToDomain)
             .singleOrNull()
     }
+
+    // v1 and v2 expose only bundles from enabled sources; explicit v3 lookups do not use this filter.
+    private val enabledSourceFilter: Op<Boolean>
+        get() = SourceTable.enabled eq true
 
     private fun sourceUrlFilter(sourceUrl: String) =
         (SourceTable.url eq sourceUrl) or (SourceTable.url eq "$sourceUrl/")

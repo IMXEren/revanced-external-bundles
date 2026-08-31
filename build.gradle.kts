@@ -93,6 +93,8 @@ dependencies {
     implementation(libs.semver4j)
 
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.ktor.test.host)
+    testRuntimeOnly(libs.h2)
 }
 
 tasks.test {
