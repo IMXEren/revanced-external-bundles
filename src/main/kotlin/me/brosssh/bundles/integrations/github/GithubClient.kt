@@ -2,9 +2,13 @@ package me.brosssh.bundles.integrations.github
 
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.*
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import me.brosssh.bundles.integrations.common.*
+import java.time.OffsetDateTime
 
 class GithubClientFactory(
     private val client: HttpClient,
@@ -27,6 +31,25 @@ class GithubClient(
         pat?.let { header(HttpHeaders.Authorization, "Bearer $it") }
     }
 
+    override fun rateLimitDeadline(
+        status: HttpStatusCode,
+        headers: Headers,
+        now: OffsetDateTime
+    ): OffsetDateTime? {
+        val retryAfter = headers[HttpHeaders.RetryAfter]
+        val rateLimited =
+            status == HttpStatusCode.TooManyRequests ||
+                (status == HttpStatusCode.Forbidden &&
+                    (headers["X-RateLimit-Remaining"]?.trim() == "0" || retryAfter != null))
+        if (!rateLimited) return null
+
+        return resolvedRateLimitDeadline(
+            retryAfter = retryAfter,
+            reset = parseEpochSeconds(headers["X-RateLimit-Reset"]),
+            now = now
+        )
+    }
+
     override suspend fun getReleases(ref: RepoRef): List<ReleaseInfo> {
         val releases = mutableListOf<ReleaseInfo>()
 
@@ -34,6 +57,7 @@ class GithubClient(
 
         while (nextUrl != null) {
             val response = client.get(nextUrl) {
+                expectSuccess = true
                 authenticate()
                 header(HttpHeaders.Accept, "application/vnd.github+json")
             }
@@ -49,6 +73,7 @@ class GithubClient(
     override suspend fun getRepo(ref: RepoRef): RepoInfo =
         client
             .get("$baseUrl/repos/${ref.namespace}/${ref.repo}") {
+                expectSuccess = true
                 authenticate()
             }
             .body<GithubRepoDto>()

@@ -1,6 +1,9 @@
 package me.brosssh.bundles.integrations.common
 
+import io.ktor.http.Headers
+import io.ktor.http.HttpStatusCode
 import java.net.URI
+import java.time.OffsetDateTime
 
 /**
  * Identifies a repository on any supported git host.
@@ -91,6 +94,13 @@ data class ReleaseInfo(
 interface GitHostClient {
     suspend fun getRepo(ref: RepoRef): RepoInfo
     suspend fun getReleases(ref: RepoRef): List<ReleaseInfo>
+
+    /** Returns the provider-specific retry deadline when [status] and [headers] indicate throttling. */
+    fun rateLimitDeadline(
+        status: HttpStatusCode,
+        headers: Headers,
+        now: OffsetDateTime
+    ): OffsetDateTime?
 }
 
 /** Creates a provider client for a resolved scheme and authority. */
