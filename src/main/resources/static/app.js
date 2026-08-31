@@ -141,7 +141,9 @@ function clearVirtualizer() {
 
 
 function currentAnchorBundleIndex() {
-    if (!virtualizer) return 0;
+    if (!virtualizer) return null;
+    const trackTop = track.getBoundingClientRect().top + window.scrollY;
+    if (window.scrollY < trackTop) return null;
     const visibleRow = virtualizer.getVirtualItems()
         .find(item => item.end >= window.scrollY);
     return (visibleRow?.index ?? 0) * lastColumns;
