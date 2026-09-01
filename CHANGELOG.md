@@ -1,3 +1,18 @@
+# [1.3.0-dev.2](https://github.com/brosssh/revanced-external-bundles/compare/v1.3.0-dev.1...v1.3.0-dev.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* enforce disabled source visibility ([2e72b2e](https://github.com/brosssh/revanced-external-bundles/commit/2e72b2e66fb303bdad5e5089afde478b66ec8e00))
+* redact Hasura admin secret from client logs ([9184510](https://github.com/brosssh/revanced-external-bundles/commit/918451062f5d567c1b5446f6b7ae7bf37280b57e))
+* **web-ui:** preserve scroll position when changing views ([4984fae](https://github.com/brosssh/revanced-external-bundles/commit/4984faeb1f36b73ccd22c695865608d2dde1e0b4))
+
+
+### Features
+
+* add disabled source hard deletion ([3ca1d95](https://github.com/brosssh/revanced-external-bundles/commit/3ca1d95ef32c87dc004aaaa76679d040446e48a0))
+* **web-ui:** improve bundle browser ([da0f955](https://github.com/brosssh/revanced-external-bundles/commit/da0f955108d58ff719040bf532d9434ada2fb2bf))
+
 # [1.3.0-dev.1](https://github.com/brosssh/revanced-external-bundles/compare/v1.2.1-dev.2...v1.3.0-dev.1) (2026-08-31)
 
 
