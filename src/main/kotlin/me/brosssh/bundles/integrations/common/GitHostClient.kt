@@ -101,6 +101,17 @@ interface GitHostClient {
         headers: Headers,
         now: OffsetDateTime
     ): OffsetDateTime?
+
+    /**
+     * Response-body-aware rate-limit hook for providers that describe throttling in an error body.
+     * Header-only clients retain the default behavior.
+     */
+    fun rateLimitDeadline(
+        status: HttpStatusCode,
+        headers: Headers,
+        now: OffsetDateTime,
+        responseBody: String?
+    ): OffsetDateTime? = rateLimitDeadline(status, headers, now)
 }
 
 /** Creates a provider client for a resolved scheme and authority. */

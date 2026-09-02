@@ -1,6 +1,7 @@
 package me.brosssh.bundles.domain.services.jobs
 
 import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CancellationException
 import me.brosssh.bundles.db.entities.SourceEntity
 import me.brosssh.bundles.db.functions.refreshIsLatestFlag
@@ -110,7 +111,7 @@ class RefreshBundlesJobService(
         }
     }
 
-    private fun handleClientFailure(
+    private suspend fun handleClientFailure(
         sourceId: Int,
         sourceUrl: String,
         authority: String,
@@ -127,7 +128,12 @@ class RefreshBundlesJobService(
         }
 
         val now = OffsetDateTime.now(ZoneOffset.UTC)
-        val limitedUntil = client.rateLimitDeadline(status, error.response.headers, now)
+        val limitedUntil = client.rateLimitDeadline(
+            status,
+            error.response.headers,
+            now,
+            error.response.bodyAsText()
+        )
         if (limitedUntil != null) {
             rateLimitRepository.record(authority, credentialFingerprint, limitedUntil)
             logger.warn("Git host $authority is rate limited until $limitedUntil")

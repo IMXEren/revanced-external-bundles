@@ -35,12 +35,21 @@ class GithubClient(
         status: HttpStatusCode,
         headers: Headers,
         now: OffsetDateTime
+    ): OffsetDateTime? = rateLimitDeadline(status, headers, now, null)
+
+    override fun rateLimitDeadline(
+        status: HttpStatusCode,
+        headers: Headers,
+        now: OffsetDateTime,
+        responseBody: String?
     ): OffsetDateTime? {
         val retryAfter = headers[HttpHeaders.RetryAfter]
         val rateLimited =
             status == HttpStatusCode.TooManyRequests ||
                 (status == HttpStatusCode.Forbidden &&
-                    (headers["X-RateLimit-Remaining"]?.trim() == "0" || retryAfter != null))
+                    (headers["X-RateLimit-Remaining"]?.trim() == "0" ||
+                        retryAfter != null ||
+                        responseBody.indicatesSecondaryRateLimit()))
         if (!rateLimited) return null
 
         return resolvedRateLimitDeadline(
@@ -80,6 +89,12 @@ class GithubClient(
             .toRepoInfo()
 
 }
+
+private fun String?.indicatesSecondaryRateLimit(): Boolean =
+    this?.let { body ->
+        body.contains("secondary rate limit", ignoreCase = true) ||
+            body.contains("abuse detection", ignoreCase = true)
+    } == true
 
 fun GithubRepoDto.toRepoInfo() = RepoInfo(
     ownerName = owner.name,

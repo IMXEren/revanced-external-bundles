@@ -143,6 +143,28 @@ class RefreshBundlesJobServiceTest {
         assertEquals(1, client.repoRequests)
     }
 
+    @Test
+    fun `GitHub secondary rate-limit body suppresses later sources`() = runBlocking {
+        insertSource("https://github.com/example/one")
+        insertSource("https://github.com/example/two")
+        val client = MutableGitHostClient(
+            failureStatus = HttpStatusCode.Forbidden,
+            failureBody = """{"message":"You have exceeded a secondary rate limit."}"""
+        )
+        val service = service(client)
+
+        service.refresh().job.join()
+
+        assertEquals(1, client.repoRequests)
+        assertNotNull(
+            rateLimitRepository.activeUntil(
+                "github.com",
+                GitHostCredentials.ANONYMOUS_FINGERPRINT,
+                OffsetDateTime.now(ZoneOffset.UTC)
+            )
+        )
+    }
+
     private fun service(
         client: GitHostClient,
         credentials: GitHostCredentials = GitHostCredentials.fromEnv("")
@@ -182,6 +204,7 @@ class RefreshBundlesJobServiceTest {
     private class MutableGitHostClient(
         var failureStatus: HttpStatusCode?,
         private val failureHeaders: Headers = Headers.Empty,
+        private val failureBody: String = "{}",
         private val failReleases: Boolean = false
     ) : GitHostClient {
         var repoRequests = 0
@@ -189,7 +212,7 @@ class RefreshBundlesJobServiceTest {
 
         private val errorClient = HttpClient(MockEngine {
             respond(
-                content = "{}",
+                content = failureBody,
                 status = requireNotNull(failureStatus),
                 headers = failureHeaders
             )
@@ -200,6 +223,14 @@ class RefreshBundlesJobServiceTest {
             headers: Headers,
             now: OffsetDateTime
         ): OffsetDateTime? = GithubClient(errorClient).rateLimitDeadline(status, headers, now)
+
+        override fun rateLimitDeadline(
+            status: HttpStatusCode,
+            headers: Headers,
+            now: OffsetDateTime,
+            responseBody: String?
+        ): OffsetDateTime? =
+            GithubClient(errorClient).rateLimitDeadline(status, headers, now, responseBody)
 
         override suspend fun getRepo(ref: RepoRef): RepoInfo {
             repoRequests++

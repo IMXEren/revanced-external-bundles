@@ -88,6 +88,19 @@ class GitHostHttpStatusTest {
     }
 
     @Test
+    fun `GitHub secondary-limit 403 without headers uses the fallback`() {
+        assertEquals(
+            now.plusSeconds(DEFAULT_RATE_LIMIT_RETRY_DELAY_SECONDS),
+            github.rateLimitDeadline(
+                HttpStatusCode.Forbidden,
+                Headers.Empty,
+                now,
+                """{"message":"You have exceeded a secondary rate limit."}"""
+            )
+        )
+    }
+
+    @Test
     fun `GitLab remaining header can prove a rate-limit 403`() {
         assertEquals(
             now.plusSeconds(DEFAULT_RATE_LIMIT_RETRY_DELAY_SECONDS),
@@ -104,6 +117,14 @@ class GitHostHttpStatusTest {
         listOf(github, gitlab, gitea).forEach { client ->
             assertNull(client.rateLimitDeadline(HttpStatusCode.Forbidden, Headers.Empty, now))
         }
+        assertNull(
+            github.rateLimitDeadline(
+                HttpStatusCode.Forbidden,
+                Headers.Empty,
+                now,
+                """{"message":"Resource not accessible by integration"}"""
+            )
+        )
     }
 
     @Test
