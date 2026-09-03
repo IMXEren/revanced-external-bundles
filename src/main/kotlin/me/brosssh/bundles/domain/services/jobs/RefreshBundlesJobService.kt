@@ -66,6 +66,7 @@ class RefreshBundlesJobService(
             credentialFingerprint,
             now
         )
+
         if (limitedUntil != null) {
             logger.info(
                 "Skipping source {} because git host {} is rate limited until {}",
@@ -83,7 +84,9 @@ class RefreshBundlesJobService(
                     try {
                         release.toDomainModel(source.intId)
                     } catch (_: BundleImportError) {
-                        logger.warn("No rvp/mpp/jar found for ${source.url}, version ${release.tagName}")
+                        logger.warn(
+                            "No rvp/mpp/jar found for ${source.url}, version ${release.tagName}"
+                        )
                         null
                     }
                 }
@@ -108,6 +111,10 @@ class RefreshBundlesJobService(
                 credentialFingerprint = credentialFingerprint,
                 error = error
             )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            logger.warn("Failed to process source {}", source.url, error)
         }
     }
 
@@ -121,6 +128,7 @@ class RefreshBundlesJobService(
     ) {
         val status = error.response.status
         val unavailableReason = sourceUnavailableReason(status)
+
         if (unavailableReason != null) {
             sourceRepository.setUnavailableReason(sourceId, unavailableReason)
             logger.warn("Source $sourceUrl is unavailable: $unavailableReason")
@@ -134,8 +142,13 @@ class RefreshBundlesJobService(
             now,
             error.response.bodyAsText()
         )
+
         if (limitedUntil != null) {
-            rateLimitRepository.record(authority, credentialFingerprint, limitedUntil)
+            rateLimitRepository.record(
+                authority,
+                credentialFingerprint,
+                limitedUntil
+            )
             logger.warn("Git host $authority is rate limited until $limitedUntil")
             return
         }
