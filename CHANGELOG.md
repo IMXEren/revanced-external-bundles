@@ -1,3 +1,10 @@
+## [1.3.1-dev.3](https://github.com/brosssh/revanced-external-bundles/compare/v1.3.1-dev.2...v1.3.1-dev.3) (2026-09-27)
+
+
+### Bug Fixes
+
+* **refresh:** improve patch scheduling, recovery, and metadata freshness ([42e6ded](https://github.com/brosssh/revanced-external-bundles/commit/42e6ded7a8c3e6a444f5bde00357ce457eb5ce81))
+
 ## [1.3.1-dev.2](https://github.com/brosssh/revanced-external-bundles/compare/v1.3.1-dev.1...v1.3.1-dev.2) (2026-09-26)
 
 
