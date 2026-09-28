@@ -2,6 +2,7 @@ package me.brosssh.bundles.integrations.common
 
 import io.ktor.http.Headers
 import io.ktor.http.HttpStatusCode
+import me.brosssh.bundles.domain.models.BundleType
 import java.net.URI
 import java.time.OffsetDateTime
 
@@ -58,18 +59,38 @@ private fun String.hasExtension(extension: String): Boolean =
  * hosts (e.g. GitLab) may expose a human-readable link title in [name] while the actual file
  * extension lives in the download URL.
  */
-fun AssetInfo.bundleTypeValue(): String? {
+fun AssetInfo.explicitBundleType(): BundleType? {
     return when {
         name.hasExtension(".rvp") ||
-            browserDownloadUrl.hasExtension(".rvp") -> "ReVanced:V4"
+            browserDownloadUrl.hasExtension(".rvp") -> BundleType.REVANCED_V4
 
         name.hasExtension(".mpp") ||
-            browserDownloadUrl.hasExtension(".mpp") -> "Morphe:V1"
-
-        name.hasExtension(".jar") ||
-            browserDownloadUrl.hasExtension(".jar") -> "ReVanced:V3"
+            browserDownloadUrl.hasExtension(".mpp") -> BundleType.MORPHE_V1
 
         else -> null
+    }
+}
+
+/**
+ * The generic JAR bundle type for this asset.
+ */
+fun AssetInfo.genericJarBundleType(): BundleType? {
+    return when {
+        name.hasExtension(".jar") ||
+                browserDownloadUrl.hasExtension(".jar") -> BundleType.REVANCED_V3
+        else -> null
+    }
+}
+
+/**
+ * Chooses a bundle type from the assets, preferring explicit bundle types
+ * over generic JARs.
+ */
+fun Iterable<AssetInfo>.choosePatchBundle(): Pair<AssetInfo, BundleType>? {
+    return firstNotNullOfOrNull { asset ->
+        asset.explicitBundleType()?.let { asset to it }
+    } ?: firstNotNullOfOrNull { asset ->
+        asset.genericJarBundleType()?.let { asset to it }
     }
 }
 
