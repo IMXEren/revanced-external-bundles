@@ -30,7 +30,7 @@ fun ReleaseInfo.toDomainModel(sourceId: Int): BundleMetadata {
             body,
             createdAt,
             downloadUrl,
-            assets.firstOrNull { it.isSignature() }?.browserDownloadUrl,
+            assets.chooseSignature(asset)?.browserDownloadUrl,
             sourceId
         ),
         fileHash = digestHash,

@@ -52,34 +52,126 @@ private fun String.hasExtension(extension: String): Boolean =
         .substringBefore('#')
         .endsWith(extension, ignoreCase = true)
 
+private fun String.bundleTypeFromExtension(): BundleType? = when {
+    hasExtension(".rvp") -> BundleType.REVANCED_V4
+    hasExtension(".mpp") -> BundleType.MORPHE_V1
+    hasExtension(".jar") -> BundleType.REVANCED_V3
+    else -> null
+}
+
+private fun String.withoutQueryOrFragment(): String =
+    substringBefore('?')
+        .substringBefore('#')
+
+private fun String.assetFileName(): String =
+    withoutQueryOrFragment()
+        .substringAfterLast('/')
+
+private fun String.hasConcreteUrlFileExtension(): Boolean {
+    val uri = runCatching { URI(this) }.getOrNull()
+    val path = uri?.rawPath ?: withoutQueryOrFragment()
+    val fileName = path.substringAfterLast('/')
+    val dotIndex = fileName.lastIndexOf('.')
+    return dotIndex > 0 && dotIndex < fileName.lastIndex
+}
+
+private fun String.bundleFileNameOrNull(): String? =
+    takeIf { bundleTypeFromExtension() != null }?.assetFileName()
+
+private fun String.signatureFileNameOrNull(): String? =
+    takeIf { hasExtension(".asc") }?.assetFileName()
+
+private fun String.equalsAssetName(other: String): Boolean =
+    equals(other, ignoreCase = true)
+
+private fun String.appendBeforeQueryOrFragment(suffix: String): String {
+    val queryIndex = indexOf('?').takeIf { it >= 0 } ?: length
+    val fragmentIndex = indexOf('#').takeIf { it >= 0 } ?: length
+    val suffixStart = minOf(queryIndex, fragmentIndex)
+    return substring(0, suffixStart) + suffix + substring(suffixStart)
+}
+
+private fun String.isSignaturePathFor(bundleUrl: String): Boolean {
+    val signatureUri = runCatching { URI(this) }.getOrNull() ?: return false
+    val bundleUri = runCatching { URI(bundleUrl) }.getOrNull() ?: return false
+    if (!signatureUri.scheme.orEmpty().equals(bundleUri.scheme.orEmpty(), ignoreCase = true)) {
+        return false
+    }
+    if (!signatureUri.rawAuthority.orEmpty()
+            .equals(bundleUri.rawAuthority.orEmpty(), ignoreCase = true)
+    ) {
+        return false
+    }
+    return signatureUri.rawPath == "${bundleUri.rawPath}.asc"
+}
+
+private fun String.hasSameResourcePathAs(other: String): Boolean {
+    val left = runCatching { URI(this) }.getOrNull() ?: return false
+    val right = runCatching { URI(other) }.getOrNull() ?: return false
+    if (!left.scheme.orEmpty().equals(right.scheme.orEmpty(), ignoreCase = true)) return false
+    if (!left.rawAuthority.orEmpty().equals(right.rawAuthority.orEmpty(), ignoreCase = true)) {
+        return false
+    }
+    return left.rawPath == right.rawPath
+}
+
+private fun String.hasSameQueryAs(other: String): Boolean {
+    val left = runCatching { URI(this) }.getOrNull() ?: return false
+    val right = runCatching { URI(other) }.getOrNull() ?: return false
+    return left.rawQuery == right.rawQuery
+}
+
+private fun AssetInfo.resolvedBundleType(): BundleType? =
+    browserDownloadUrl.bundleTypeFromExtension()
+        ?: if (
+            browserDownloadUrl.hasExtension(".asc") ||
+            browserDownloadUrl.hasConcreteUrlFileExtension()
+        ) {
+            null
+        } else {
+            name.bundleTypeFromExtension()
+        }
+
+private fun AssetInfo.bundleFileNames(): Set<String> {
+    browserDownloadUrl.bundleFileNameOrNull()?.let { return setOf(it) }
+    if (
+        browserDownloadUrl.hasExtension(".asc") ||
+        browserDownloadUrl.hasConcreteUrlFileExtension()
+    ) {
+        return emptySet()
+    }
+    return name.bundleFileNameOrNull()?.let(::setOf) ?: emptySet()
+}
+
+private fun AssetInfo.signatureFileNames(): Set<String> {
+    browserDownloadUrl.signatureFileNameOrNull()?.let { return setOf(it) }
+    if (
+        browserDownloadUrl.bundleTypeFromExtension() != null ||
+        browserDownloadUrl.hasConcreteUrlFileExtension()
+    ) {
+        return emptySet()
+    }
+    return name.signatureFileNameOrNull()?.let(::setOf) ?: emptySet()
+}
+
 /**
  * The bundle type value for this asset, derived from its file extension.
  *
- * The extension is detected from both the [name] and the [browserDownloadUrl] because some
- * hosts (e.g. GitLab) may expose a human-readable link title in [name] while the actual file
- * extension lives in the download URL.
+ * The download URL is authoritative when it contains a recognized extension because some hosts
+ * (e.g. GitLab) may expose an arbitrary human-readable link title in [name]. The name is used when
+ * the URL does not identify a bundle type.
  */
 fun AssetInfo.explicitBundleType(): BundleType? {
-    return when {
-        name.hasExtension(".rvp") ||
-            browserDownloadUrl.hasExtension(".rvp") -> BundleType.REVANCED_V4
-
-        name.hasExtension(".mpp") ||
-            browserDownloadUrl.hasExtension(".mpp") -> BundleType.MORPHE_V1
-
-        else -> null
-    }
+    return resolvedBundleType()
+        ?.takeUnless { it == BundleType.REVANCED_V3 }
 }
 
 /**
  * The generic JAR bundle type for this asset.
  */
 fun AssetInfo.genericJarBundleType(): BundleType? {
-    return when {
-        name.hasExtension(".jar") ||
-                browserDownloadUrl.hasExtension(".jar") -> BundleType.REVANCED_V3
-        else -> null
-    }
+    return resolvedBundleType()
+        ?.takeIf { it == BundleType.REVANCED_V3 }
 }
 
 /**
@@ -95,9 +187,75 @@ fun Iterable<AssetInfo>.choosePatchBundle(): Pair<AssetInfo, BundleType>? {
 }
 
 /** Whether this asset is a detached signature (`.asc`). */
-fun AssetInfo.isSignature(): Boolean =
-    name.hasExtension(".asc") ||
-        browserDownloadUrl.hasExtension(".asc")
+fun AssetInfo.isSignature(): Boolean {
+    if (browserDownloadUrl.bundleTypeFromExtension() != null) return false
+    if (browserDownloadUrl.hasExtension(".asc")) return true
+    if (browserDownloadUrl.hasConcreteUrlFileExtension()) return false
+    return name.hasExtension(".asc")
+}
+
+/**
+ * Chooses the detached signature associated with [bundleAsset]. If the release contains only one
+ * bundle candidate, preserve the historical behavior of accepting its first signature even when
+ * the signature does not include the bundle file name.
+ */
+fun Iterable<AssetInfo>.chooseSignature(bundleAsset: AssetInfo): AssetInfo? {
+    val assets = toList()
+    val signatures = assets.filter { it.isSignature() }
+    val bundleCandidates = assets.filter { asset ->
+        asset.resolvedBundleType() != null
+    }
+
+    bundleAsset.browserDownloadUrl
+        .takeIf { it.bundleTypeFromExtension() != null }
+        ?.appendBeforeQueryOrFragment(".asc")
+        ?.let { expectedSignatureUrl ->
+            val matches = signatures.filter { signature ->
+                signature.browserDownloadUrl == expectedSignatureUrl
+            }
+            if (matches.size == 1) return matches.single()
+            if (matches.size > 1) return null
+        }
+
+    bundleAsset.browserDownloadUrl
+        .takeIf { it.bundleTypeFromExtension() != null }
+        ?.let { bundleUrl ->
+            val pathMatches = signatures.filter { signature ->
+                signature.browserDownloadUrl.isSignaturePathFor(bundleUrl)
+            }
+            val queryMatches = pathMatches.filter { signature ->
+                signature.browserDownloadUrl.hasSameQueryAs(bundleUrl)
+            }
+            if (queryMatches.size == 1) return queryMatches.single()
+            if (queryMatches.size > 1) return null
+
+            val bundlePathIsUnique = bundleCandidates.count { candidate ->
+                candidate.browserDownloadUrl.bundleTypeFromExtension() != null &&
+                    candidate.browserDownloadUrl.hasSameResourcePathAs(bundleUrl)
+            } == 1
+            if (pathMatches.size == 1 && bundlePathIsUnique) return pathMatches.single()
+            if (pathMatches.isNotEmpty()) return null
+        }
+
+    val selectedFileNames = bundleAsset.bundleFileNames().filter { selectedName ->
+        bundleCandidates.count { candidate ->
+            candidate.bundleFileNames()
+                .any { candidateName -> candidateName.equalsAssetName(selectedName) }
+        } == 1
+    }
+
+    val matches = signatures.filter { signature ->
+        signature.signatureFileNames().any { signatureName ->
+            selectedFileNames.any { selectedName ->
+                signatureName.equalsAssetName("$selectedName.asc")
+            }
+        }
+    }
+    if (matches.size == 1) return matches.single()
+    if (matches.size > 1) return null
+
+    return if (bundleCandidates.size == 1) signatures.firstOrNull() else null
+}
 
 data class ReleaseInfo(
     val tagName: String,
